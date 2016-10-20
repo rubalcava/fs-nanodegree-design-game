@@ -13,17 +13,19 @@ from google.appengine.api import taskqueue
 
 from models import User, Game, Score
 from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
-    ScoreForms, UserGamesForm, DeleteGameForm, ScoreBoard
+    ScoreForms, UserGamesForm, DeleteGameForm, ScoreBoard, UserRankingForm, \
+    MultiUserRankingForm
 from utils import get_by_urlsafe
 
 NEW_GAME_REQUEST = endpoints.ResourceContainer(NewGameForm)
 GET_GAME_REQUEST = endpoints.ResourceContainer(
         urlsafe_game_key=messages.StringField(1),)
-MAKE_MOVE_REQUEST = endpoints.ResourceContainer(
-    MakeMoveForm,
-    urlsafe_game_key=messages.StringField(1),)
+MAKE_MOVE_REQUEST = endpoints.ResourceContainer(MakeMoveForm,
+        urlsafe_game_key=messages.StringField(1),)
 USER_REQUEST = endpoints.ResourceContainer(user_name=messages.StringField(1),
                                            email=messages.StringField(2))
+SCORE_BOARD_REQUEST = endpoints.ResourceContainer(
+        number_of_results=messages.IntegerField(1))
 
 MEMCACHE_MOVES_REMAINING = 'MOVES_REMAINING'
 
@@ -37,6 +39,8 @@ class HangmanApi(remote.Service):
                       http_method='POST')
     def create_user(self, request):
         """Create a User. Requires a unique username"""
+        if request.user_name is None:
+            raise endpoints.BadRequestException('User name is required!')
         if User.query(User.name == request.user_name).get():
             raise endpoints.ConflictException(
                     'A User with that name already exists!')
@@ -195,17 +199,36 @@ class HangmanApi(remote.Service):
                       http_method='GET')
     def get_scores(self, request):
         """Return all scores"""
-        return ScoreForms(scores=[score.to_form() for score in Score.query()])
+
+        return ScoreForms(scores=[score.to_form()
+                              for score in Score.query()])
 
 
-    @endpoints.method(response_message=ScoreBoard,
-                      path='scoreboard',
-                      name='get_score_board',
+    @endpoints.method(response_message=MultiUserRankingForm,
+                      path='userrankings',
+                      name='get_user_rankings',
                       http_method='GET')
-    def get_score_board(self, request):
+    def get_user_rankings(self, request):
+        """Return user rankings"""
+        users = User.query().order(-User.user_score)
+
+        return MultiUserRankingForm(rankings=[user.to_user_ranking_form()
+                                    for user in users])
+
+
+    @endpoints.method(request_message=SCORE_BOARD_REQUEST,
+                      response_message=ScoreBoard,
+                      path='scoreboard',
+                      name='get_high_scores',
+                      http_method='GET')
+    def get_high_scores(self, request):
         """Return score board"""
-        return ScoreBoard(high_scores=[score.to_form() for score in
-                          Score.query().order(-Score.game_score)])
+        if request.number_of_results == 0:
+            raise endpoints.BadRequestException('Limit cannot be zero!')
+        else:
+            scores = Score.query().order(-Score.game_score).fetch(
+                        request.number_of_results)
+            return ScoreBoard(high_scores=[score.to_form() for score in scores])
 
 
     @endpoints.method(request_message=USER_REQUEST,

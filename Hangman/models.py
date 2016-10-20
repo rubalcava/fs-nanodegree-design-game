@@ -12,7 +12,18 @@ WORDS = open('words.txt').read().splitlines()
 class User(ndb.Model):
     """User profile"""
     name = ndb.StringProperty(required=True)
-    email =ndb.StringProperty()
+    email = ndb.StringProperty()
+    total_game_score = ndb.IntegerProperty(required=True, default=0)
+    total_games_played = ndb.IntegerProperty(required=True, default=0)
+    user_score = ndb.FloatProperty(required=True, default=0)
+
+    def to_user_ranking_form(self):
+        """Returns user info to ranking form"""
+
+        return UserRankingForm(user_name=self.name,
+                               total_game_score=self.total_game_score,
+                               total_games_played=self.total_games_played,
+                               user_score=self.user_score)
 
 
 class Game(ndb.Model):
@@ -86,6 +97,14 @@ class Game(ndb.Model):
 
         game_score = self.attempts_remaining * len(self.target)
 
+        user = game.user.get()
+        user.total_game_score = user.total_game_score + game_score
+        user.total_games_played = user.total_games_played + 1
+
+        user.user_score = (user.total_game_score/user.total_games_played)
+
+        user.put()
+
         # Add the game to the score 'board'
         score = Score(user=self.user, date=date.today(), won=won,
                       game_score=game_score)
@@ -151,6 +170,19 @@ class ScoreForms(messages.Message):
 class ScoreBoard(messages.Message):
     """Return high scores in descending order"""
     high_scores = messages.MessageField(ScoreForm, 1, repeated=True)
+
+
+class UserRankingForm(messages.Message):
+    """Form for returning user ranking"""
+    user_name = messages.StringField(1, required=True)
+    total_game_score = messages.IntegerField(2, required=True)
+    total_games_played = messages.IntegerField(3, required=True)
+    user_score = messages.FloatField(4, required=True)
+
+
+class MultiUserRankingForm(messages.Message):
+    """Form for returning multiple user ranking forms"""
+    rankings = messages.MessageField(UserRankingForm, 1, repeated=True)
 
 
 class StringMessage(messages.Message):
