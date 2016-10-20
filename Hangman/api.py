@@ -14,7 +14,7 @@ from google.appengine.api import taskqueue
 from models import User, Game, Score
 from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
     ScoreForms, UserGamesForm, DeleteGameForm, ScoreBoard, UserRankingForm, \
-    MultiUserRankingForm
+    MultiUserRankingForm, GameHistoryForm
 from utils import get_by_urlsafe
 
 NEW_GAME_REQUEST = endpoints.ResourceContainer(NewGameForm)
@@ -192,6 +192,22 @@ class HangmanApi(remote.Service):
                 return game.to_form('Letters only!')
         else:
             return game.to_form('Valid guesses are one letter only!')
+
+
+    @endpoints.method(request_message=GET_GAME_REQUEST,
+                      response_message=GameHistoryForm,
+                      path='game/{urlsafe_game_key}/history',
+                      name='get_game_history',
+                      http_method='GET')
+    def get_game_history(self, request):
+        """Return the current game history."""
+        game = get_by_urlsafe(request.urlsafe_game_key, Game)
+
+        if game:
+            return game.to_game_history_form()
+        else:
+            raise endpoints.NotFoundException('Game not found!')
+
 
     @endpoints.method(response_message=ScoreForms,
                       path='scores',

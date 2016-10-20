@@ -55,8 +55,8 @@ class Game(ndb.Model):
         game = Game(user=user,
                     target=word_to_use,
                     obscured_target=hidden_word,
-                    tried_letters_were_wrong=" ",
-                    correct_letters=" ",
+                    tried_letters_were_wrong="",
+                    correct_letters="",
                     game_over=False,
                     parent=user)
 
@@ -72,6 +72,19 @@ class Game(ndb.Model):
         form.game_over = self.game_over
         form.message = message
         return form
+
+    def to_game_history_form(self):
+        """Returns a form representation of the history of a game"""
+
+        return GameHistoryForm(urlsafe_key=self.key.urlsafe(),
+                               attempts_remaining=self.attempts_remaining,
+                               game_over=self.game_over,
+                               user_name=self.user.get().name,
+                               correct_moves=self.correct_letters,
+                               wrong_moves=self.tried_letters_were_wrong,
+                               last_answer_state=self.obscured_target)
+
+
 
     def to_user_games_form(self):
         """Returns a UserGamesForm representation of the Game"""
@@ -120,6 +133,15 @@ class Score(ndb.Model):
         return ScoreForm(user_name=self.user.get().name, won=self.won,
                          date=str(self.date), game_score=self.game_score)
 
+class GameHistoryForm(messages.Message):
+    """Form for displaying game history"""
+    urlsafe_key = messages.StringField(1, required=True)
+    attempts_remaining = messages.IntegerField(2, required=True)
+    game_over = messages.BooleanField(3, required=True)
+    user_name = messages.StringField(4, required=True)
+    correct_moves = messages.StringField(5, required=True)
+    wrong_moves = messages.StringField(6, required=True)
+    last_answer_state = messages.StringField(7, required=True)
 
 class GameForm(messages.Message):
     """GameForm for outbound game state information"""
