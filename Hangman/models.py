@@ -76,12 +76,26 @@ class Game(ndb.Model):
     def to_game_history_form(self):
         """Returns a form representation of the history of a game"""
 
+        formatted_correct_letters = ""
+        formatted_wrong_letters = ""
+
+        correct_list = list(self.correct_letters)
+        wrong_list = list(self.tried_letters_were_wrong)
+
+        for idx, val in enumerate(correct_list):
+            formatted_correct_letters = formatted_correct_letters+ ("%s: %s, "
+                                         % ((idx+1), val))
+
+        for idx, val in enumerate(wrong_list):
+            formatted_wrong_letters = formatted_wrong_letters + ("%s: %s, "
+                                         % ((idx+1), val))
+
         return GameHistoryForm(urlsafe_key=self.key.urlsafe(),
                                attempts_remaining=self.attempts_remaining,
                                game_over=self.game_over,
                                user_name=self.user.get().name,
-                               correct_moves=self.correct_letters,
-                               wrong_moves=self.tried_letters_were_wrong,
+                               correct_moves=formatted_correct_letters,
+                               wrong_moves=formatted_wrong_letters,
                                last_answer_state=self.obscured_target)
 
 
