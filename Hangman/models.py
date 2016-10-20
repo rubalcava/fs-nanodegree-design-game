@@ -21,8 +21,6 @@ class User(ndb.Model):
         """Returns user info to ranking form"""
 
         return UserRankingForm(user_name=self.name,
-                               total_game_score=self.total_game_score,
-                               total_games_played=self.total_games_played,
                                user_score=self.user_score)
 
 
@@ -175,8 +173,6 @@ class ScoreBoard(messages.Message):
 class UserRankingForm(messages.Message):
     """Form for returning user ranking"""
     user_name = messages.StringField(1, required=True)
-    total_game_score = messages.IntegerField(2, required=True)
-    total_games_played = messages.IntegerField(3, required=True)
     user_score = messages.FloatField(4, required=True)
 
 
