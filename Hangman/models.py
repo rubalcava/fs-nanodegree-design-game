@@ -22,7 +22,7 @@ class Game(ndb.Model):
     attempts_remaining = ndb.IntegerProperty(required=True, default=8)
     game_over = ndb.BooleanProperty(required=True, default=False)
     tried_letters_were_wrong = ndb.StringProperty(required=True)
-    correct_letters = db.StringProperty(required=True)
+    correct_letters = ndb.StringProperty(required=True)
     user = ndb.KeyProperty(required=True, kind='User')
 
     @classmethod
@@ -73,9 +73,9 @@ class Game(ndb.Model):
                         user_name=self.user.get().name)
 
 
-    def deleted_game_form(self):
+    def deleted_game_form(self, message):
         return DeleteGameForm(urlsafe_key=self.key.urlsafe(),
-                              message='Game Cancelled!')
+                              message=message)
 
 
     def end_game(self, won=False):
