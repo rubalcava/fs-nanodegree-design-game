@@ -76,7 +76,11 @@ class HangmanApi(remote.Service):
     def get_game(self, request):
         """Return the current game state."""
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
-        if game:
+        is_game_over = game.game_over
+
+        if is_game_over:
+            return game.to_form('Game Over!')
+        elif not is_game_over:
             return game.to_form('Time to make a move!')
         else:
             raise endpoints.NotFoundException('Game not found!')
