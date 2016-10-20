@@ -66,10 +66,12 @@ class Game(ndb.Model):
         the player lost."""
         self.game_over = True
         self.put()
-        guesses_taken = (8-self.attempts_remaining)
+
+        game_score = self.attempts_remaining * len(self.target)
+
         # Add the game to the score 'board'
         score = Score(user=self.user, date=date.today(), won=won,
-                      guesses=guesses_taken)
+                      game_score=game_score)
         score.put()
 
 
@@ -78,7 +80,7 @@ class Score(ndb.Model):
     user = ndb.KeyProperty(required=True, kind='User')
     date = ndb.DateProperty(required=True)
     won = ndb.BooleanProperty(required=True)
-    guesses = ndb.IntegerProperty(required=True)
+    game_score = ndb.IntegerProperty(required=True)
 
     def to_form(self):
         return ScoreForm(user_name=self.user.get().name, won=self.won,
