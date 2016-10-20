@@ -150,7 +150,10 @@ class HangmanApi(remote.Service):
                     for index in range(len(answer_as_list)):
                         if answer_as_list[index] == guess:
                             hidden_answer_as_list[index] = guess
-                            game.correct_letters = game.correct_letters + guess
+                            # Add to correct letters string
+                            if guess not in game.correct_letters:
+                                game.correct_letters = (game.correct_letters +
+                                                        guess)
                     # Update game property with found letter
                     game.obscured_target = ''.join(hidden_answer_as_list)
 
