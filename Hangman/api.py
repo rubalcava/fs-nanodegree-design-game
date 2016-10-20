@@ -27,8 +27,8 @@ USER_REQUEST = endpoints.ResourceContainer(user_name=messages.StringField(1),
 
 MEMCACHE_MOVES_REMAINING = 'MOVES_REMAINING'
 
-@endpoints.api(name='guess_a_number', version='v1')
-class GuessANumberApi(remote.Service):
+@endpoints.api(name='hangman', version='v1')
+class HangmanApi(remote.Service):
     """Game API"""
     @endpoints.method(request_message=USER_REQUEST,
                       response_message=StringMessage,
@@ -57,8 +57,7 @@ class GuessANumberApi(remote.Service):
             raise endpoints.NotFoundException(
                     'A User with that name does not exist!')
         try:
-            game = Game.new_game(user.key, request.min,
-                                 request.max, request.attempts)
+            game = Game.new_game(user.key, request.min, request.max)
         except ValueError:
             raise endpoints.BadRequestException('Maximum must be greater '
                                                 'than minimum!')
@@ -67,7 +66,7 @@ class GuessANumberApi(remote.Service):
         # This operation is not needed to complete the creation of a new game
         # so it is performed out of sequence.
         taskqueue.add(url='/tasks/cache_average_attempts')
-        return game.to_form('Good luck playing Guess a Number!')
+        return game.to_form('Good luck playing Hangman!')
 
     @endpoints.method(request_message=GET_GAME_REQUEST,
                       response_message=GameForm,
@@ -90,25 +89,57 @@ class GuessANumberApi(remote.Service):
     def make_move(self, request):
         """Makes a move. Returns a game state with message"""
         game = get_by_urlsafe(request.urlsafe_game_key, Game)
+        # Temporary lists
+        answer_as_list = list(game.target)
+        hidden_answer_as_list = list(game.obscured_target)
+        # Pull properties into local variables to reduce ndb reads
+        tried_letters = game.tried_letters_were_wrong
+
+        # Game is already over, no need to do anything but let the user know
         if game.game_over:
             return game.to_form('Game already over!')
 
-        game.attempts_remaining -= 1
-        if request.guess == game.target:
-            game.end_game(True)
-            return game.to_form('You win!')
+        # Check if guess is 1 character long
+        if len(request.guess) == 1:
+            # Once we know that guess is correct length, check if its a letter
+            if request.guess.isalpha():
+                # Check if guess is in word, and if it's already been found
+                if request.guess in game.target and request.guess not in game.obscured_target:
+                    for index in range(len(answer_as_list)):
+                        if answer_as_list[index] == request.guess:
+                            hidden_answer_as_list[index] = request.guess
+                    # Update game property with found letter
+                    game.obscured_target = ''.join(hidden_answer_as_list)
 
-        if request.guess < game.target:
-            msg = 'Too low!'
-        else:
-            msg = 'Too high!'
+                    # Since $ is not a letter, we can safely say that if there is a $ char
+                    # in the current game, the game is ongoing. If not, it's over.
+                    if "$" not in game.obscured_target:
+                        game.end_game(True)
+                        return game.to_form('You win!')
+                    else:
+                        # Update game entity and give user updated word status
+                        game.put()
+                        return game.to_form('Nice! This is what you have left: %s' % game.obscured_target)
+                # Let user know they already found letter. No attempt penalty.
+                elif request.guess in game.obscured_target:
+                    return game.to_form('You already got that letter! This is what you have left: %s' % game.obscured_target)
+                # Let user know they already tried letter. No attempt penalty.
+                elif request.guess in tried_letters:
+                    return game.to_form('You already tried that letter! This is what you have left: %s' % game.obscured_target)
+                else:
+                    game.tried_letters_were_wrong = tried_letters + request.guess
+                    game.attempts_remaining -= 1
 
-        if game.attempts_remaining < 1:
-            game.end_game(False)
-            return game.to_form(msg + ' Game over!')
+                if game.attempts_remaining < 1:
+                    game.end_game(False)
+                    return game.to_form('Game over!')
+                else:
+                    game.put()
+                    return game.to_form('Try again! This is what you have left: %s' % game.obscured_target)
+            else:
+                return game.to_form('Letters only!')
         else:
-            game.put()
-            return game.to_form(msg)
+            return game.to_form('Valid guesses are one letter only!')
 
     @endpoints.method(response_message=ScoreForms,
                       path='scores',
@@ -153,4 +184,4 @@ class GuessANumberApi(remote.Service):
                          'The average moves remaining is {:.2f}'.format(average))
 
 
-api = endpoints.api_server([GuessANumberApi])
+api = endpoints.api_server([HangmanApi])

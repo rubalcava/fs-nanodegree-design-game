@@ -7,6 +7,7 @@ from datetime import date
 from protorpc import messages
 from google.appengine.ext import ndb
 
+WORDS = open('words.txt').read().splitlines()
 
 class User(ndb.Model):
     """User profile"""
@@ -16,22 +17,37 @@ class User(ndb.Model):
 
 class Game(ndb.Model):
     """Game object"""
-    target = ndb.IntegerProperty(required=True)
-    attempts_allowed = ndb.IntegerProperty(required=True)
-    attempts_remaining = ndb.IntegerProperty(required=True, default=5)
+    target = ndb.StringProperty(required=True)
+    obscured_target= ndb.StringProperty(required=True)
+    attempts_remaining = ndb.IntegerProperty(required=True, default=8)
     game_over = ndb.BooleanProperty(required=True, default=False)
+    tried_letters_were_wrong = ndb.StringProperty(required=True)
     user = ndb.KeyProperty(required=True, kind='User')
 
     @classmethod
-    def new_game(cls, user, min, max, attempts):
+    def new_game(cls, user, min, max):
         """Creates and returns a new game"""
+
         if max < min:
             raise ValueError('Maximum must be greater than minimum')
+
+        # Use min and max to make a list of acceptable words
+        acceptable_words = []
+        for word in WORDS:
+            if len(word) >= min and len(word)<=max:
+                acceptable_words.append(word)
+
+        word_to_use = random.choice(acceptable_words)
+        hidden_word = ''
+        for letter in word_to_use:
+            hidden_word = hidden_word + "$"
+
         game = Game(user=user,
-                    target=random.choice(range(1, max + 1)),
-                    attempts_allowed=attempts,
-                    attempts_remaining=attempts,
+                    target=word_to_use,
+                    obscured_target=hidden_word,
+                    tried_letters_were_wrong=" ",
                     game_over=False)
+
         game.put()
         return game
 
@@ -50,9 +66,10 @@ class Game(ndb.Model):
         the player lost."""
         self.game_over = True
         self.put()
+        guesses_taken = (8-self.attempts_remaining)
         # Add the game to the score 'board'
         score = Score(user=self.user, date=date.today(), won=won,
-                      guesses=self.attempts_allowed - self.attempts_remaining)
+                      guesses=guesses_taken)
         score.put()
 
 
@@ -82,12 +99,11 @@ class NewGameForm(messages.Message):
     user_name = messages.StringField(1, required=True)
     min = messages.IntegerField(2, default=1)
     max = messages.IntegerField(3, default=10)
-    attempts = messages.IntegerField(4, default=5)
 
 
 class MakeMoveForm(messages.Message):
     """Used to make a move in an existing game"""
-    guess = messages.IntegerField(1, required=True)
+    guess = messages.StringField(1, required=True)
 
 
 class ScoreForm(messages.Message):
