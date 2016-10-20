@@ -22,6 +22,7 @@ class Game(ndb.Model):
     attempts_remaining = ndb.IntegerProperty(required=True, default=8)
     game_over = ndb.BooleanProperty(required=True, default=False)
     tried_letters_were_wrong = ndb.StringProperty(required=True)
+    correct_letters = db.StringProperty(required=True)
     user = ndb.KeyProperty(required=True, kind='User')
 
     @classmethod
@@ -37,7 +38,7 @@ class Game(ndb.Model):
             if len(word) >= min and len(word)<=max:
                 acceptable_words.append(word)
 
-        word_to_use = random.choice(acceptable_words)
+        word_to_use = random.choice(acceptable_words).lower()
         hidden_word = ''
         for letter in word_to_use:
             hidden_word = hidden_word + "$"
@@ -46,6 +47,7 @@ class Game(ndb.Model):
                     target=word_to_use,
                     obscured_target=hidden_word,
                     tried_letters_were_wrong=" ",
+                    correct_letters=" ",
                     game_over=False,
                     parent=user)
 
@@ -69,6 +71,11 @@ class Game(ndb.Model):
                         attempts_remaining=self.attempts_remaining,
                         game_over=self.game_over, message='Game in Progress',
                         user_name=self.user.get().name)
+
+
+    def deleted_game_form(self):
+        return DeleteGameForm(urlsafe_key=self.key.urlsafe(),
+                              message='Game Cancelled!')
 
 
     def end_game(self, won=False):
@@ -104,6 +111,11 @@ class GameForm(messages.Message):
     game_over = messages.BooleanField(3, required=True)
     message = messages.StringField(4, required=True)
     user_name = messages.StringField(5, required=True)
+
+class DeleteGameForm(messages.Message):
+    """Form to report confirmation of deleted games"""
+    urlsafe_key = messages.StringField(1, required=True)
+    message = messages.StringField(2, required=True)
 
 
 class UserGamesForm(messages.Message):

@@ -13,7 +13,7 @@ from google.appengine.api import taskqueue
 
 from models import User, Game, Score
 from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
-    ScoreForms, UserGamesForm
+    ScoreForms, UserGamesForm, DeleteGameForm
 from utils import get_by_urlsafe
 
 NEW_GAME_REQUEST = endpoints.ResourceContainer(NewGameForm)
@@ -101,6 +101,25 @@ class HangmanApi(remote.Service):
         else:
             raise endpoints.NotFoundException('Game not found!')
 
+
+    @endpoints.method(request_message=GET_GAME_REQUEST,
+                      response_message=DeleteGameForm,
+                      path='game/{urlsafe_game_key}/delete',
+                      name='cancel_game',
+                      http_method='GET')
+    def cancel_game(self, request):
+        """Return the current game state."""
+        game = get_by_urlsafe(request.urlsafe_game_key, Game)
+
+        if game:
+            delete_confirmation = game.deleted_game_form()
+            game.key.delete()
+            return delete_confirmation
+
+        else:
+            return Delete
+
+
     @endpoints.method(request_message=MAKE_MOVE_REQUEST,
                       response_message=GameForm,
                       path='game/{urlsafe_game_key}',
@@ -112,8 +131,6 @@ class HangmanApi(remote.Service):
         # Temporary lists
         answer_as_list = list(game.target)
         hidden_answer_as_list = list(game.obscured_target)
-        # Pull properties into local variables to reduce ndb reads
-        tried_letters = game.tried_letters_were_wrong
 
         # Game is already over, no need to do anything but let the user know
         if game.game_over:
@@ -123,11 +140,14 @@ class HangmanApi(remote.Service):
         if len(request.guess) == 1:
             # Once we know that guess is correct length, check if its a letter
             if request.guess.isalpha():
+                # answer is lower, so make the guess lower
+                guess = request.guess.lower()
                 # Check if guess is in word, and if it's already been found
-                if request.guess in game.target and request.guess not in game.obscured_target:
+                if guess in game.target and guess not in game.obscured_target:
                     for index in range(len(answer_as_list)):
-                        if answer_as_list[index] == request.guess:
-                            hidden_answer_as_list[index] = request.guess
+                        if answer_as_list[index] == guess:
+                            hidden_answer_as_list[index] = guess
+                            game.correct_letters = game.correct_letters + guess
                     # Update game property with found letter
                     game.obscured_target = ''.join(hidden_answer_as_list)
 
@@ -141,14 +161,14 @@ class HangmanApi(remote.Service):
                         game.put()
                         return game.to_form('Nice! This is what you have left: %s' % game.obscured_target)
                 # Let user know they already found letter. No attempt penalty.
-                elif request.guess in game.obscured_target:
+                elif guess in game.obscured_target:
                     return game.to_form('You already got that letter! This is what you have left: %s' % game.obscured_target)
                 # Let user know they already tried letter. No attempt penalty.
-                elif request.guess in tried_letters:
+                elif guess in game.tried_letters_were_wrong:
                     return game.to_form('You already tried that letter! This is what you have left: %s' % game.obscured_target)
                 # Guess wrong, reduce tries left, add guess to string of tries
                 else:
-                    game.tried_letters_were_wrong = tried_letters + request.guess
+                    game.tried_letters_were_wrong = game.tried_letters_were_wrong + guess
                     game.attempts_remaining -= 1
                 # Is game over? Let's check.
                 if game.attempts_remaining < 1:
