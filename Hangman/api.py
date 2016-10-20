@@ -126,13 +126,15 @@ class HangmanApi(remote.Service):
                 # Let user know they already tried letter. No attempt penalty.
                 elif request.guess in tried_letters:
                     return game.to_form('You already tried that letter! This is what you have left: %s' % game.obscured_target)
+                # Guess wrong, reduce tries left, add guess to string of tries
                 else:
                     game.tried_letters_were_wrong = tried_letters + request.guess
                     game.attempts_remaining -= 1
-
+                # Is game over? Let's check.
                 if game.attempts_remaining < 1:
                     game.end_game(False)
                     return game.to_form('Game over!')
+                # Update game entity, let user know guess wrong.
                 else:
                     game.put()
                     return game.to_form('Try again! This is what you have left: %s' % game.obscured_target)
