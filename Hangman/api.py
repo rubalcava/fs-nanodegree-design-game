@@ -13,7 +13,7 @@ from google.appengine.api import taskqueue
 
 from models import User, Game, Score
 from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
-    ScoreForms, UserGamesForm, DeleteGameForm
+    ScoreForms, UserGamesForm, DeleteGameForm, ScoreBoard
 from utils import get_by_urlsafe
 
 NEW_GAME_REQUEST = endpoints.ResourceContainer(NewGameForm)
@@ -195,7 +195,18 @@ class HangmanApi(remote.Service):
                       http_method='GET')
     def get_scores(self, request):
         """Return all scores"""
-        return ScoreForms(items=[score.to_form() for score in Score.query()])
+        return ScoreForms(scores=[score.to_form() for score in Score.query()])
+
+
+    @endpoints.method(response_message=ScoreBoard,
+                      path='scoreboard',
+                      name='get_score_board',
+                      http_method='GET')
+    def get_score_board(self, request):
+        """Return score board"""
+        return ScoreBoard(high_scores=[score.to_form() for score in
+                          Score.query().order(-Score.game_score)])
+
 
     @endpoints.method(request_message=USER_REQUEST,
                       response_message=ScoreForms,
@@ -211,6 +222,7 @@ class HangmanApi(remote.Service):
         scores = Score.query(Score.user == user.key)
         return ScoreForms(items=[score.to_form() for score in scores])
 
+
     @endpoints.method(response_message=StringMessage,
                       path='games/average_attempts',
                       name='get_average_attempts_remaining',
@@ -218,6 +230,7 @@ class HangmanApi(remote.Service):
     def get_average_attempts(self, request):
         """Get the cached average moves remaining"""
         return StringMessage(message=memcache.get(MEMCACHE_MOVES_REMAINING) or '')
+
 
     @staticmethod
     def _cache_average_attempts():
