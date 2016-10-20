@@ -13,7 +13,7 @@ from google.appengine.api import taskqueue
 
 from models import User, Game, Score
 from models import StringMessage, NewGameForm, GameForm, MakeMoveForm,\
-    ScoreForms
+    ScoreForms, UserGamesForm
 from utils import get_by_urlsafe
 
 NEW_GAME_REQUEST = endpoints.ResourceContainer(NewGameForm)
@@ -67,6 +67,22 @@ class HangmanApi(remote.Service):
         # so it is performed out of sequence.
         taskqueue.add(url='/tasks/cache_average_attempts')
         return game.to_form('Good luck playing Hangman!')
+
+    @endpoints.method(request_message=USER_REQUEST,
+                      response_message=UserGamesForm,
+                      path='games/user/{user_name}',
+                      name='get_user_games',
+                      http_method='GET')
+    def get_user_games(self, request):
+        """Return all active games for a user"""
+        user = User.query(User.name == request.user_name).get()
+        if not user:
+            raise endpoints.NotFoundException(
+                    'A User with that name does not exist!')
+        games = Game.query(ancestor=user.key)
+
+        return UserGamesForm(games=[game.to_user_games_form() for game in games])
+
 
     @endpoints.method(request_message=GET_GAME_REQUEST,
                       response_message=GameForm,

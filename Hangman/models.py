@@ -46,7 +46,8 @@ class Game(ndb.Model):
                     target=word_to_use,
                     obscured_target=hidden_word,
                     tried_letters_were_wrong=" ",
-                    game_over=False)
+                    game_over=False,
+                    parent=user)
 
         game.put()
         return game
@@ -60,6 +61,15 @@ class Game(ndb.Model):
         form.game_over = self.game_over
         form.message = message
         return form
+
+    def to_user_games_form(self):
+        """Returns a UserGamesForm representation of the Game"""
+
+        return GameForm(urlsafe_key=self.key.urlsafe(),
+                        attempts_remaining=self.attempts_remaining,
+                        game_over=self.game_over, message='Game in Progress',
+                        user_name=self.user.get().name)
+
 
     def end_game(self, won=False):
         """Ends the game - if won is True, the player won. - if won is False,
@@ -94,6 +104,11 @@ class GameForm(messages.Message):
     game_over = messages.BooleanField(3, required=True)
     message = messages.StringField(4, required=True)
     user_name = messages.StringField(5, required=True)
+
+
+class UserGamesForm(messages.Message):
+    """Form for outbound information about active user games"""
+    games = messages.MessageField(GameForm, 1, repeated=True)
 
 
 class NewGameForm(messages.Message):
