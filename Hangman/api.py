@@ -79,7 +79,7 @@ class HangmanApi(remote.Service):
         if not user:
             raise endpoints.NotFoundException(
                     'A User with that name does not exist!')
-        games = Game.query(ancestor=user.key)
+        games = Game.query(ancestor=user.key).filter(Game.game_over != True)
 
         return UserGamesForm(games=[game.to_user_games_form() for game in games])
 

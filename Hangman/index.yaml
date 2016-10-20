@@ -14,3 +14,8 @@ indexes:
   properties:
   - name: game_over
   - name: user
+
+- kind: Game
+  ancestor: yes
+  properties:
+  - name: game_over
