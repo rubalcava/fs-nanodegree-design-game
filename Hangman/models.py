@@ -97,7 +97,7 @@ class Game(ndb.Model):
 
         game_score = self.attempts_remaining * len(self.target)
 
-        user = game.user.get()
+        user = self.user.get()
         user.total_game_score = user.total_game_score + game_score
         user.total_games_played = user.total_games_played + 1
 
