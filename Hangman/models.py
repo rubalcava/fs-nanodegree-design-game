@@ -32,6 +32,7 @@ class Game(ndb.Model):
     game_over = ndb.BooleanProperty(required=True, default=False)
     tried_letters_were_wrong = ndb.StringProperty(required=True)
     correct_letters = ndb.StringProperty(required=True)
+    all_guesses = ndb.StringProperty(required=True)
     user = ndb.KeyProperty(required=True, kind='User')
 
     @classmethod
@@ -57,6 +58,7 @@ class Game(ndb.Model):
                     obscured_target=hidden_word,
                     tried_letters_were_wrong="",
                     correct_letters="",
+                    all_guesses="",
                     game_over=False,
                     parent=user)
 
@@ -76,19 +78,37 @@ class Game(ndb.Model):
     def to_game_history_form(self):
         """Returns a form representation of the history of a game"""
 
-        formatted_correct_letters = ""
-        formatted_wrong_letters = ""
+        formatted_all_letters = "Order of guesses: "
+        formatted_correct_letters = "Order of correct guesses: "
+        formatted_wrong_letters = "Order of incorrect guesses: "
 
         correct_list = list(self.correct_letters)
         wrong_list = list(self.tried_letters_were_wrong)
+        all_list = list(self.all_guesses)
+
+        for idx, val in enumerate(all_list):
+            if (idx + 1) == len(all_list):
+                formatted_all_letters = formatted_all_letters + \
+                                            ("%s: %s" % ((idx+1), val))
+            else:
+                formatted_all_letters = formatted_all_letters + \
+                                            ("%s: %s, " % ((idx+1), val))
 
         for idx, val in enumerate(correct_list):
-            formatted_correct_letters = formatted_correct_letters+ ("%s: %s, "
-                                         % ((idx+1), val))
+            if (idx + 1) == len(correct_list):
+                formatted_correct_letters = formatted_correct_letters + \
+                                            ("%s: %s" % ((idx+1), val))
+            else:
+                formatted_correct_letters = formatted_correct_letters + \
+                                            ("%s: %s, " % ((idx+1), val))
 
         for idx, val in enumerate(wrong_list):
-            formatted_wrong_letters = formatted_wrong_letters + ("%s: %s, "
-                                         % ((idx+1), val))
+            if (idx + 1) == len(wrong_list):
+                formatted_wrong_letters = formatted_wrong_letters + \
+                                          ("%s: %s" % ((idx+1), val))
+            else:
+                formatted_wrong_letters = formatted_wrong_letters + \
+                                          ("%s: %s, " % ((idx+1), val))
 
         return GameHistoryForm(urlsafe_key=self.key.urlsafe(),
                                attempts_remaining=self.attempts_remaining,
@@ -96,7 +116,8 @@ class Game(ndb.Model):
                                user_name=self.user.get().name,
                                correct_moves=formatted_correct_letters,
                                wrong_moves=formatted_wrong_letters,
-                               last_answer_state=self.obscured_target)
+                               all_moves=formatted_all_letters,
+                               last_game_state=self.obscured_target)
 
 
 
@@ -155,7 +176,8 @@ class GameHistoryForm(messages.Message):
     user_name = messages.StringField(4, required=True)
     correct_moves = messages.StringField(5, required=True)
     wrong_moves = messages.StringField(6, required=True)
-    last_answer_state = messages.StringField(7, required=True)
+    all_moves = messages.StringField(7, required=True)
+    last_game_state = messages.StringField(8, required=True)
 
 class GameForm(messages.Message):
     """GameForm for outbound game state information"""

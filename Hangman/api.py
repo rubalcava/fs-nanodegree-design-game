@@ -147,7 +147,8 @@ class HangmanApi(remote.Service):
         if len(request.guess) == 1:
             # Once we know that guess is correct length, check if its a letter
             if request.guess.isalpha():
-                # answer is lower, so make the guess lower
+                # Guess is confirmed good by previous logic
+                # Answer is lowercase, so make the guess lowercase
                 guess = request.guess.lower()
                 # Check if guess is in word, and if it's already been found
                 if guess in game.target and guess not in game.obscured_target:
@@ -158,9 +159,9 @@ class HangmanApi(remote.Service):
                             if guess not in game.correct_letters:
                                 game.correct_letters = (game.correct_letters +
                                                         guess)
-                    # Update game property with found letter
+                    # Update game properties with found letter
                     game.obscured_target = ''.join(hidden_answer_as_list)
-
+                    game.all_guesses = game.all_guesses + guess
                     # Since $ is not a letter, we can safely say that if there is a $ char
                     # in the current game, the game is ongoing. If not, it's over.
                     if "$" not in game.obscured_target:
@@ -178,6 +179,7 @@ class HangmanApi(remote.Service):
                     return game.to_form('You already tried that letter! This is what you have left: %s' % game.obscured_target)
                 # Guess wrong, reduce tries left, add guess to string of tries
                 else:
+                    game.all_guesses = game.all_guesses + guess
                     game.tried_letters_were_wrong = game.tried_letters_were_wrong + guess
                     game.attempts_remaining -= 1
                 # Is game over? Let's check.
