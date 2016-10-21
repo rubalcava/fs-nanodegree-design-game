@@ -41,6 +41,6 @@ If you wish to run it in the development environment, please follow the next ste
 
 7. To view the development datastore, navigate chrome to http://localhost:8000/datastore
 
-8. When you're done, head back to the terminal and type the following Ctrl+code
+8. When you're done, head back to the terminal and type the following Ctrl+C
 
 9. Thanks for trying my game out!
