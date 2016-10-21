@@ -13,6 +13,7 @@ User rankings are calculated by taking the sum of a user's game scores and divid
 
 ##How to Run:
 This app is currently live at http://my-hangman-game.appspot.com
+    - However, it is only an api, so going to this website will (correctly) tell you there is no page here.
 
 To test with API Explorer, visit http://my-hangman-game.appspot.com/_ah/api/explorer
 
