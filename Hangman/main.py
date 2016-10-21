@@ -15,8 +15,8 @@ from models import User
 
 class SendReminderEmail(webapp2.RequestHandler):
     def get(self):
-        """Send a reminder email to each User with an email about games.
-        Called every hour using a cron job"""
+        """Send a reminder email to users with active games.
+        Called every 24 hours using a cron job"""
         app_id = "my-hangman-game"
         # Get active games
         active_games = Game.query(Game.game_over != True)
