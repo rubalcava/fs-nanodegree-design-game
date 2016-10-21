@@ -43,13 +43,16 @@ class Game(ndb.Model):
             raise ValueError('Maximum must be greater than minimum')
 
         # Use min and max to make a list of acceptable words
+        # from a dictionary file
         acceptable_words = []
         for word in WORDS:
             if len(word) >= min and len(word)<=max:
                 acceptable_words.append(word)
 
+        # Make the word lower case
         word_to_use = random.choice(acceptable_words).lower()
         hidden_word = ''
+        # Make a copy of the word with letters obscured
         for letter in word_to_use:
             hidden_word = hidden_word + "$"
 
@@ -86,6 +89,7 @@ class Game(ndb.Model):
         wrong_list = list(self.tried_letters_were_wrong)
         all_list = list(self.all_guesses)
 
+        # Make formatted strings for all, good, bad guesses
         for idx, val in enumerate(all_list):
             if (idx + 1) == len(all_list):
                 formatted_all_letters = formatted_all_letters + \
@@ -141,8 +145,13 @@ class Game(ndb.Model):
         self.game_over = True
         self.put()
 
-        game_score = self.attempts_remaining * len(self.target)
+        # Give game score
+        if won is True:
+            game_score = self.attempts_remaining * len(self.target)
+        else:
+            game_score = 0
 
+        # Add game score and game to user properties
         user = self.user.get()
         user.total_game_score = user.total_game_score + game_score
         user.total_games_played = user.total_games_played + 1
