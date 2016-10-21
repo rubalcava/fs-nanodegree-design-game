@@ -263,7 +263,10 @@ class HangmanApi(remote.Service):
             raise endpoints.NotFoundException(
                     'A User with that name does not exist!')
         scores = Score.query(Score.user == user.key)
-        return ScoreForms(scores=[score.to_form() for score in scores])
+        if scores.get() is not None:
+            return ScoreForms(scores=[score.to_form() for score in scores])
+        else:
+            raise endpoints.NotFoundException('User has no scores at this time.')
 
 
     @endpoints.method(response_message=StringMessage,
