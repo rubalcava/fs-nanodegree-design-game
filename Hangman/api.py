@@ -95,15 +95,18 @@ class HangmanApi(remote.Service):
                       http_method='GET')
     def get_game(self, request):
         """Return the current game state."""
-        game = get_by_urlsafe(request.urlsafe_game_key, Game)
-        is_game_over = game.game_over
+        try:
+            game = get_by_urlsafe(request.urlsafe_game_key, Game)
+            is_game_over = game.game_over
 
-        if is_game_over:
-            return game.to_form('Game Over!')
-        elif not is_game_over:
-            return game.to_form('Time to make a move!')
-        else:
-            raise endpoints.NotFoundException('Game not found!')
+            if is_game_over:
+                return game.to_form('Game Over!')
+            elif not is_game_over:
+                return game.to_form('Time to make a move!')
+            else:
+                raise endpoints.NotFoundException('Game not found!')
+        except Exception:
+            raise endpoints.BadRequestException('Invalid key, please try a real key.')
 
 
     @endpoints.method(request_message=GET_GAME_REQUEST,
@@ -113,9 +116,8 @@ class HangmanApi(remote.Service):
                       http_method='GET')
     def cancel_game(self, request):
         """Return the current game state."""
-        game = get_by_urlsafe(request.urlsafe_game_key, Game)
-
-        if game:
+        try:
+            game = get_by_urlsafe(request.urlsafe_game_key, Game)
             if game.game_over is False:
                 delete_confirmation = game.deleted_game_form(message='Game cancelled!')
                 game.key.delete()
@@ -123,8 +125,8 @@ class HangmanApi(remote.Service):
             else:
                 return game.deleted_game_form(message='Game is already over.' \
                                               ' Cannot cancel.')
-        else:
-            return endpoints.NotFoundException('Game not found!')
+        except Exception:
+            raise endpoints.BadRequestException('Invalid key, please try a real key.')
 
 
     @endpoints.method(request_message=MAKE_MOVE_REQUEST,
